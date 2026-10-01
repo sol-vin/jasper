@@ -12,6 +12,6 @@ license: MIT
 
 targets:
   jasper:
-    main: bin/jasper.cr
+    main: src/jasper_cli.cr
 
 crystal: ">= 1.10.0"
