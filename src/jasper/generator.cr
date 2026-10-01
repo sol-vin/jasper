@@ -313,7 +313,7 @@ module Jasper
       master_file : Path,
       grouped : Hash(String, Array(DocDocument)),
       generated_rel_paths : Array(String),
-      default_root : String
+      default_root : String,
     ) : Nil
       root_parts = default_root.split("::")
       full_root_name = default_root
@@ -387,13 +387,13 @@ module Jasper
                           "make all         # Compile bridge, test suites, examples, and sync",
                           "make test        # Execute specs, in-editor tool tests, and runtime suites",
                           "make editor      # Launch test project in Godot Editor",
-                          "make docs        # Build offline HTML documentation site in docs/"
+                          "make docs        # Build offline HTML documentation site in docs/",
                         ]
                       else
                         [
                           "make docs        # Build offline HTML documentation site in docs/",
                           "make test        # Execute specifications and test suites",
-                          "make all         # Build and verify all targets"
+                          "make all         # Build and verify all targets",
                         ]
                       end
 

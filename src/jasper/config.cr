@@ -42,7 +42,7 @@ module Jasper
         @master_index : Bool = true,
         @aliases : Array(String) = [] of String,
         @quick_start : QuickStart? = nil,
-        @search_index_file : String? = nil
+        @search_index_file : String? = nil,
       )
       end
     end
@@ -58,7 +58,7 @@ module Jasper
       @source_dir : String = "docs_src",
       @output_dir : String = "src/docs",
       @master_file : String = "src/docs.cr",
-      @features : Features = Features.new
+      @features : Features = Features.new,
     )
     end
 

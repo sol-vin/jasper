@@ -18,7 +18,7 @@ module Jasper
         @summary : String,
         @anchor : String,
         @options : Array(String) = [] of String,
-        @topics : Array(String) = [] of String
+        @topics : Array(String) = [] of String,
       )
       end
     end
@@ -39,7 +39,7 @@ module Jasper
         @summary : String,
         @track : String,
         @module_name : String,
-        @sections : Array(SectionEntry) = [] of SectionEntry
+        @sections : Array(SectionEntry) = [] of SectionEntry,
       )
       end
     end

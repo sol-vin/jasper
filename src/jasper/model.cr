@@ -35,7 +35,7 @@ module Jasper
       @items : Array(String)? = nil,
       @return_value : Array(String)? = nil,
       @metadata : Hash(String, String)? = nil,
-      @custom_data : Hash(String, YAML::Any)? = nil
+      @custom_data : Hash(String, YAML::Any)? = nil,
     )
     end
   end
@@ -63,7 +63,7 @@ module Jasper
       @parent_module : String? = nil,
       @overview : String? = nil,
       @related_sources : Array(String)? = nil,
-      @sections : Array(DocSection) = [] of DocSection
+      @sections : Array(DocSection) = [] of DocSection,
     )
     end
 
