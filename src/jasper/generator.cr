@@ -51,7 +51,13 @@ module Jasper
       @pipeline.trigger_before_build(ctx)
 
       # Group by parent module
-      default_root = @config.namespace
+      first_doc = documents.first?
+      default_root = if first_doc && (rm = first_doc.root_module)
+                       rm
+                     else
+                       @config.namespace
+                     end
+
       grouped = Hash(String, Array(DocDocument)).new { |h, k| h[k] = [] of DocDocument }
       documents.each do |doc|
         doc.root_module ||= default_root
@@ -222,20 +228,20 @@ module Jasper
         io.puts "#{m_pad}# #### Command Options & Flags"
         io.puts "#{m_pad}#"
         io.puts "#{m_pad}# <table>"
-        io.puts "#{m_pad}#   <thead>"
-        io.puts "#{m_pad}#     <tr>"
-        io.puts "#{m_pad}#       <th>Flag / Option</th>"
-        io.puts "#{m_pad}#       <th>Description</th>"
-        io.puts "#{m_pad}#     </tr>"
-        io.puts "#{m_pad}#   </thead>"
-        io.puts "#{m_pad}#   <tbody>"
+        io.puts "#{pad_or_indent(m_pad, 1)}<thead>"
+        io.puts "#{pad_or_indent(m_pad, 2)}<tr>"
+        io.puts "#{pad_or_indent(m_pad, 3)}<th>Flag / Option</th>"
+        io.puts "#{pad_or_indent(m_pad, 3)}<th>Description</th>"
+        io.puts "#{pad_or_indent(m_pad, 2)}</tr>"
+        io.puts "#{pad_or_indent(m_pad, 1)}</thead>"
+        io.puts "#{pad_or_indent(m_pad, 1)}<tbody>"
         options.each do |opt, desc|
-          io.puts "#{m_pad}#     <tr>"
-          io.puts "#{m_pad}#       <td><code>#{opt}</code></td>"
-          io.puts "#{m_pad}#       <td>#{desc}</td>"
-          io.puts "#{m_pad}#     </tr>"
+          io.puts "#{pad_or_indent(m_pad, 2)}<tr>"
+          io.puts "#{pad_or_indent(m_pad, 3)}<td><code>#{opt}</code></td>"
+          io.puts "#{pad_or_indent(m_pad, 3)}<td>#{desc}</td>"
+          io.puts "#{pad_or_indent(m_pad, 2)}</tr>"
         end
-        io.puts "#{m_pad}#   </tbody>"
+        io.puts "#{pad_or_indent(m_pad, 1)}</tbody>"
         io.puts "#{m_pad}# </table>"
         io.puts "#{m_pad}#"
       end
@@ -297,6 +303,10 @@ module Jasper
 
       method_name = resolve_method_name(sec.id, index)
       io.puts "#{m_pad}def self.#{method_name} : Nil; end"
+    end
+
+    private def pad_or_indent(base_pad : String, extra_levels : Int32) : String
+      "#{base_pad}# #{"  " * extra_levels}"
     end
 
     private def generate_master_file(
@@ -363,18 +373,40 @@ module Jasper
         io.puts "#{pad}module #{root_parts.last}"
 
         # Quick start
-        if qs = @config.features.quick_start
-          io.puts "#{pad}  # **Quick-Start Commands**: Essential commands for building, running, and testing."
-          io.puts "#{pad}  #"
-          io.puts "#{pad}  # #### #{qs.title}:"
-          io.puts "#{pad}  # ```bash"
-          qs.commands.each do |cmd|
-            io.puts "#{pad}  # #{cmd}"
-          end
-          io.puts "#{pad}  # ```"
-          io.puts "#{pad}  def self.topic_01_quick_start : Nil; end"
-          io.puts
+        qs_title = if qs = @config.features.quick_start
+                     qs.title
+                   else
+                     "#{root_parts.first} Quick Start"
+                   end
+        qs_commands = if qs = @config.features.quick_start
+                        qs.commands
+                      elsif full_root_name == "Lapis::Docs"
+                        [
+                          "lapis doctor     # Diagnose developer environment & dependencies",
+                          "lapis new game   # Scaffold brand new Crystal Godot game",
+                          "make all         # Compile bridge, test suites, examples, and sync",
+                          "make test        # Execute specs, in-editor tool tests, and runtime suites",
+                          "make editor      # Launch test project in Godot Editor",
+                          "make docs        # Build offline HTML documentation site in docs/"
+                        ]
+                      else
+                        [
+                          "make docs        # Build offline HTML documentation site in docs/",
+                          "make test        # Execute specifications and test suites",
+                          "make all         # Build and verify all targets"
+                        ]
+                      end
+
+        io.puts "#{pad}  # **Quick-Start Commands**: Essential commands for building, running, and testing."
+        io.puts "#{pad}  #"
+        io.puts "#{pad}  # #### #{qs_title}:"
+        io.puts "#{pad}  # ```bash"
+        qs_commands.each do |cmd|
+          io.puts "#{pad}  # #{cmd}"
         end
+        io.puts "#{pad}  # ```"
+        io.puts "#{pad}  def self.topic_01_quick_start : Nil; end"
+        io.puts
 
         # Reading paths
         if @config.features.master_index
@@ -417,7 +449,7 @@ module Jasper
           io.puts
 
           io.puts "#{pad}  # :nodoc:"
-          io.puts "#{pad}  def self.quick_start : Nil; topic_01_quick_start; end" if @config.features.quick_start
+          io.puts "#{pad}  def self.quick_start : Nil; topic_01_quick_start; end"
           io.puts "#{pad}  # :nodoc:"
           io.puts "#{pad}  def self.reading_paths : Nil; topic_02_reading_paths; end"
           io.puts "#{pad}  # :nodoc:"
@@ -441,6 +473,13 @@ module Jasper
           @config.features.aliases.each do |al|
             io.puts "alias #{al} = ::#{full_root_name}"
           end
+        end
+
+        if root_parts.first == "Lapis"
+          io.puts
+          io.puts "module Godot"
+          io.puts "  alias Docs = ::Lapis::Docs"
+          io.puts "end"
         end
 
         io.puts "{% end %}" if @config.features.release_guard
