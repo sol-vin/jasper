@@ -40,4 +40,5 @@ jobs:
           ../bin/jasper init --namespace "SmokeTest::Docs"
           ../bin/jasper validate
           ../bin/jasper build
-          crystal docs --no-codegen src/smoke_test/docs.cr
+          crystal docs --project-name="SmokeTest" src/docs.cr
+          test -f docs/index.html
