@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Crystal
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: latest
+
+      - name: Verify Shards
+        run: shards check || shards install
+
+      - name: Check Formatting
+        run: crystal tool format --check
+
+      - name: Run Test Specifications
+        run: crystal spec --error-trace
+
+      - name: Build Jasper Executable
+        run: crystal build bin/jasper.cr -o bin/jasper
+
+      - name: End-to-End Scaffolding & Docs Smoke Test
+        run: |
+          mkdir -p tmp_smoke && cd tmp_smoke
+          ../bin/jasper init --namespace "SmokeTest::Docs"
+          ../bin/jasper validate
+          ../bin/jasper build
+          crystal docs --no-codegen src/smoke_test/docs.cr

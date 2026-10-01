@@ -1,0 +1,10 @@
+/bin/
+/.shards/
+/lib/
+/docs/
+*.dwarf
+*.pdb
+*.exe
+*.dll
+*.so
+*.dylib

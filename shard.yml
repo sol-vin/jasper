@@ -1,0 +1,17 @@
+name: jasper
+version: 0.1.0
+
+authors:
+  - sol-vin <sol@sol.vin>
+
+description: |
+  Modular structured guide, book, and documentation compiler for Crystal docs.
+  Empowers any Crystal project to build multi-track documentation hierarchies.
+
+license: MIT
+
+targets:
+  jasper:
+    main: bin/jasper.cr
+
+crystal: ">= 1.10.0"
