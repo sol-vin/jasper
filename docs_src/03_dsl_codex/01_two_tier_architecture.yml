@@ -1,0 +1,69 @@
+id: TWO_TIER_ARCHITECTURE
+title: The Two-Tier Architecture Standard
+summary: Strict separation between raw algorithmic engines and user-facing declarative DSLs.
+track: 03_dsl_codex
+overview: |
+  The foundational tenet of the Sol-Vin architecture is the **Two-Tier Engine & Declarative Builder**
+  pattern. Every Crystal library, shard, or system authored in the organization must strictly decouple
+  raw algorithmic computation, memory boundaries, and low-level FFI from the human-friendly,
+  ergonomic Domain-Specific Language (DSL) layer.
+
+related_sources:
+  - "AGENTS.md"
+  - "src/codex/engine/state_machine.cr"
+  - "src/codex/engine/pipeline.cr"
+  - "src/codex/dsl/builder.cr"
+  - "src/codex.cr"
+
+sections:
+  - id: topic_01_core_philosophy
+    title: Core Philosophy & The Decoupling Axiom
+    summary: Why architectural layering prevents syntax boilerplate from corrupting algorithmic engines.
+    content: |
+      In modern systems programming, libraries frequently suffer from one of two failure modes:
+      1. **Under-engineered Ergonomics**: Raw pointers, cumbersome constructor chains, and dense boilerplate
+         that burden the application developer.
+      2. **Over-abstracted Engines**: Syntax sugar and DSL macros deeply intertwined with core data structures,
+         causing hidden heap allocations, dynamic dictionary lookups, and sluggish runtime performance.
+
+      Sol-Vin solves this dichotomy with a strict two-tier architectural standard:
+      - **Tier 1 (Core Engine)** contains zero macro boilerplate and zero syntax assumptions. It is pure,
+        strongly typed, and optimized for maximum throughput.
+      - **Tier 2 (Declarative DSL)** wraps Tier 1 using clean block receivers and compile-time AST macros,
+        translating expressive human declarations into optimized Tier 1 engine calls.
+
+  - id: topic_02_tier_one_engine_axioms
+    title: Tier 1 Engine Axioms (src/<project>/engine/ or core/)
+    summary: Invariant rules for constructing high-throughput, memory-safe engine primitives.
+    content: |
+      All code within Tier 1 must adhere to these inviolable axioms:
+      - **Zero Magical Side-Effects**: State changes must be explicit. No monkey-patching of standard library types.
+      - **Explicit Memory Boundaries & Zero-Allocation Hot Paths**: Game loops, frame render cycles, and
+        packet processing must not allocate heap memory on active frames.
+      - **Pure Static Types**: Rely on Crystal algebraic unions, structs, generics, and statically-sized
+        pointers rather than runtime reflection or untyped `Any` containers.
+      - **Deterministic State Machines**: Transition tables and pipeline stages must be deterministic and
+        fully testable in isolation.
+
+  - id: topic_03_tier_two_dsl_axioms
+    title: Tier 2 Declarative DSL Axioms (src/<project>/dsl/ or macros/)
+    summary: Invariant rules for authoring beautiful, ergonomic builders and macro interfaces.
+    content: |
+      Tier 2 provides the pleasant developer experience (DX) that characterizes Sol-Vin software:
+      - **Scoped Block Yielding**: Use `yield ctx` (or `with self yield`) to establish clean, readable configuration blocks.
+      - **Fluent Method Chaining**: Builders return `self` to allow seamless chaining without state leakage.
+      - **Compile-Time AST Generation**: Use Crystal macros to validate types and register bindings at compile time.
+      - **Deferred Execution**: Declarative blocks configure schemas or pipelines; execution only occurs when explicitly invoked.
+
+  - id: topic_04_cross_repo_standards
+    title: Ecosystem-Wide Adoption Matrix
+    summary: How the Two-Tier standard maps across all Sol-Vin repositories.
+    content: |
+      | Repository | Tier 1 (Core Engine) | Tier 2 (Declarative DSL) |
+      | :--- | :--- | :--- |
+      | `sol-vin/lapis` | LibGodot C FFI, Variant pointers, GDExtension ClassDB | `node`, `prop`, `signal`, `on_ready` macros |
+      | `sol-vin/celestine` | Coordinate transforms, matrix math, SVG primitives | `Celestine.draw do \|ctx\|` builder |
+      | `sol-vin/crowbar` | Byte mutators, bit-flippers, coverage harnesses | `scope.preserve(:json) do \|rule\|` |
+      | `sol-vin/opal` | Terminal diffing, ANSI escape sequences, TEA engine | Lipgloss composable styling chains, Clap CLI DSL |
+      | `sol-vin/citrine` | MIPS R5900 bytecode, GS registers, DMA channels | Declarative GIF/DMA packet assembly DSL |
+      | `sol-vin/solvin-ai-org` | `SolvinCodex::Engine` (StateMachine, Pipeline, Registry) | `SolvinCodex::DSL` (Builders & AST Macros) |

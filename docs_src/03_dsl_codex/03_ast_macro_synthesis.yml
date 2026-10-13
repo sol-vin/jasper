@@ -1,0 +1,59 @@
+id: AST_MACRO_SYNTHESIS
+title: "Compile-Time AST Macros & Zero-Allocation Primitives"
+summary: Static schema registration, AST node inspection, and allocation-free hot paths in Crystal.
+track: 03_dsl_codex
+overview: |
+  The third pillar of the Sol-Vin Two-Tier DSL Codex is **Compile-Time AST Synthesis** paired with
+  **Zero-Allocation Engine Execution**. By leveraging Crystal's hygienic macro system (`TypeDeclaration`,
+  `Assign`, `Call`, and `@type` reflection), Tier 2 DSLs transform human-readable declarations into
+  compile-time constants, static dispatch tables, and zero-overhead struct primitives.
+
+related_sources:
+  - "AGENTS.md"
+  - "src/codex/dsl/macros.cr"
+  - "src/codex/engine/registry.cr"
+  - "spec/dsl_codex_spec.cr"
+
+sections:
+  - id: topic_01_ast_node_inspection
+    title: "AST Node Inspection (TypeDeclaration & Assign)"
+    summary: Parsing Crystal AST nodes at compile time to synthesize strongly-typed metadata.
+    content: |
+      Rather than relying on runtime reflection or untyped hashes, Sol-Vin macros inspect Crystal AST
+      nodes directly during compilation:
+
+      ```crystal
+      macro solvin_prop(decl)
+        {% if decl.is_a?(TypeDeclaration) %}
+          __builder.prop({{decl.var.stringify}}, {{decl.type.stringify}}, {{decl.value ? decl.value.stringify : "nil"}})
+        {% elsif decl.is_a?(Assign) %}
+          __builder.prop({{decl.target.stringify}}, "Object", {{decl.value.stringify}})
+        {% end %}
+      end
+      ```
+
+      This allows developers to write natural Crystal type declarations (`prop speed : Float32 = 10.0`)
+      while generating deterministic registration calls into `SolvinCodex::Engine::Registry`.
+
+  - id: topic_02_zero_allocation_hot_paths
+    title: "Zero-Allocation Hot Paths & Value Types"
+    summary: Designing value-type structs and static transition tables for real-time loops.
+    content: |
+      In performance-critical systems such as `sol-vin/lapis` (Godot 4.8 frame loops) and `sol-vin/citrine`
+      (PS2 Emotion Engine MIPS R5900), heap allocations inside per-frame ticks are strictly forbidden:
+      - **Immutable Metadata Structs**: `PropertyMetadata` and `SignalMetadata` are stack-allocated `struct`
+        value types, eliminating GC pressure during schema inspection.
+      - **Pre-Allocated Transition Tables**: `StateMachine(S, E)` indexes transitions by tuple keys `{S, E}`
+        populated during the Tier 2 builder phase, ensuring `trigger(event)` executes in $O(1)$ without
+        allocating closures or intermediate objects.
+
+  - id: topic_03_verification_and_spec_harness
+    title: "Dual-Tier Verification & Spec Architecture"
+    summary: Testing Tier 1 engines in isolation and Tier 2 DSLs for ergonomic parity.
+    content: |
+      Every Sol-Vin library must maintain a two-tier specification suite (`spec/dsl_codex_spec.cr`):
+      1. **Tier 1 Unit Specs**: Verify `StateMachine`, `Pipeline`, and `Registry` directly using raw
+         constructors to guarantee algorithmic determinism independent of DSL syntax.
+      2. **Tier 2 Ergonomic Specs**: Verify block builders (`SolvinCodex::DSL.state_machine`,
+         `SolvinCodex::DSL.pipeline`, `SolvinCodex::DSL.node`) and compile-time macros (`solvin_node`,
+         `solvin_prop`, `solvin_signal`) to certify that declarative constructs produce identical Tier 1 state.

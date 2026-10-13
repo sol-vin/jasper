@@ -1,0 +1,98 @@
+id: DECLARATIVE_BUILDERS
+title: The Declarative Builder Pattern & Yield Mechanics
+summary: Block contexts, yield-receiver scoping, fluent configuration, and tree assembly.
+track: 03_dsl_codex
+overview: |
+  The Declarative Builder Pattern is the primary user-facing interface pattern in Sol-Vin DSLs.
+  Rather than passing loose configuration dictionaries, named tuples, or calling lengthy sequences
+  of imperative setters, developers express configurations as hierarchical blocks.
+
+related_sources:
+  - "AGENTS.md"
+  - "src/codex/dsl/builder.cr"
+  - "spec/dsl_codex_spec.cr"
+
+sections:
+  - id: topic_01_yield_receiver_mechanics
+    title: "Scoped Block Yielding: yield ctx vs with self yield"
+    summary: Tradeoffs and best practices between contextual yield receivers and implicit self scoping.
+    content: |
+      Crystal provides two main ways to yield execution to a configuration block:
+      
+      1. **Explicit Yield Receiver (`yield ctx`)** [RECOMMENDED FOR SOL-VIN]:
+         ```crystal
+         def self.build(&)
+           builder = Builder.new
+           yield builder
+           builder.build
+         end
+         
+         # Invocation
+         MyDSL.build do |ctx|
+           ctx.option "value"
+         end
+         ```
+         - **Advantages**: Total clarity regarding where methods originate. Prevents accidental shadowing
+           of outer-scope methods.
+         
+      2. **Implicit Self Yield (`with self yield`)**:
+         ```crystal
+         def self.draw(&block : Canvas ->)
+           canvas = Canvas.new
+           with canvas yield
+         end
+         ```
+         - **Advantages**: Extremely concise syntax for deeply nested declarative markup (e.g. Celestine vector graphics).
+
+  - id: topic_02_fluent_method_chaining
+    title: Fluent Configuration Chaining
+    summary: Designing method chains that preserve immutability and return self.
+    content: |
+      Methods on builder objects should return `self` to allow fluent chaining alongside block nesting:
+      
+      ```crystal
+      class StyleBuilder
+        def bold : self
+          @bold = true
+          self
+        end
+        
+        def foreground(color : Color) : self
+          @fg = color
+          self
+        end
+      end
+      
+      style = StyleBuilder.new.bold.foreground(Color::Cyan)
+      ```
+      
+      When combined with blocks, this yields clean, readable configuration structures that mirror the
+      mental model of the programmer.
+
+  - id: topic_03_nested_builders_and_hierarchies
+    title: Hierarchical Tree Assembly
+    summary: Assembling nested parent-child trees without leaky parent references.
+    content: |
+      When building nested structures such as Godot node trees or UI components, builders yield child builders:
+      
+      ```crystal
+      node "World" do |world|
+        world.node "Player" do |player|
+          player.prop "speed", "Float32", "200.0"
+        end
+        world.node "Camera"
+      end
+      ```
+      
+      Each nested block receives an isolated child context, cleanly constructing the tree in memory
+      before converting into Tier 1 engine representations.
+
+  - id: topic_04_validation_and_error_barriers
+    title: Validation & Error Barriers
+    summary: Enforcing configuration completeness at the builder boundary.
+    content: |
+      Tier 1 engines should never receive invalid, incomplete, or corrupted configuration.
+      The Tier 2 builder acts as an **Error Barrier**:
+      - It validates required fields upon `.build`.
+      - It checks for cycles in transition graphs.
+      - It converts programmer-friendly errors into crisp, readable messages before the engine begins execution.

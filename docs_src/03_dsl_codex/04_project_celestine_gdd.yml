@@ -1,0 +1,83 @@
+id: PROJECT_CELESTINE_GDD
+title: "Project Celestine: Canonical 3D Retro Game Design Document (GDD)"
+summary: Complete Game Design Document, mathematical balance formulas, Lapis scene architecture, and PS2 hardware budgets for Project Celestine.
+track: 03_dsl_codex
+overview: |
+  **Project Celestine: Shards of the Astral Spire** is the flagship 3D retro sci-fi action-platformer
+  and Prism ARPG designed for **Lapis** (Godot Engine 4.8+ in Crystal) and **Citrine** (PlayStation 2).
+  Authored by **Epsilon (`Ε`)**, this canonical GDD formalizes the core gameplay loop, kinematic physics,
+  elemental prism combat math, enemy archetypes, Lapis node hierarchies, and strict 60 FPS memory budgets
+  adhering to the **Sol-Vin Two-Tier Engine & Declarative Builder Codex**.
+
+related_sources:
+  - "docs/gdd/project_celestine.md"
+  - "src/codex/engine/celestine_gdd.cr"
+  - "src/codex/dsl/celestine_gdd_builder.cr"
+  - "spec/celestine_gdd_spec.cr"
+
+sections:
+  - id: topic_01_executive_pitch_and_core_loop
+    title: Executive Pitch, Platform Targets & Core Gameplay Loop
+    summary: High-velocity 3D retro action-platforming across Desktop Godot 4.8+ and PlayStation 2.
+    content: |
+      In **Project Celestine**, players control **Vespera**, an Astral Weaver ascending a shattered
+      megastructure suspended in a binary star system. Armed with the **Refraction Blade**, Vespera shifts
+      between four elemental prism frequencies (**Solar**, **Lunar**, **Void**, and **Aether**) to chain
+      kinetic 3D platforming (`Jump` -> `AirDash` -> `WallSlide` -> `GlideHover`) with precision melee
+      combos, parries, and harmonic beam attacks.
+
+      ### Hardware & Frame Pacing Targets
+      - **Desktop (Lapis Godot 4.8+)**: 60 FPS locked (`16.66 ms` budget), `<= 500` draw calls/frame,
+        `<= 512 MB` RAM, `<= 256 MB` VRAM.
+      - **PlayStation 2 (Citrine MIPS R5900)**: 60 FPS NTSC VBLANK locked, `<= 180` GIF DMA packets/frame,
+        `<= 32 MB` EE Main RAM, `<= 4 MB` GS eDRAM, `16 KB` Scratchpad RAM (`SPRAM`) for zero-allocation hot loops.
+
+  - id: topic_02_kinematics_and_state_machine
+    title: Player Kinematics & Deterministic Action State Machine
+    summary: Zero-allocation physics tuning and O(1) state transitions in Tier 1.
+    content: |
+      All player movement physics are encapsulated in the stack-allocated value struct
+      `SolvinCodex::Celestine::Engine::MovementPhysicsConfig`:
+      - **Run Speed**: `12.0 m/s` base (`17.4 m/s` sprint at `1.45x` multiplier).
+      - **Jump Trajectory**: `jump_impulse = 14.5 m/s` under `gravity = 32.0 m/s²`, yielding a peak
+        apex height of `H = v_0^2 / (2g) = 3.285 m` in `0.453 seconds`.
+      - **Air Dash**: `28.0 m/s` over `0.18 seconds` (`5.04 m` horizontal burst with gravity suspension).
+      - **Input Forgiveness**: `0.12 s` coyote time and `0.10 s` jump input buffer.
+
+      The `PlayerActionState` enum (`Idle`, `Running`, `Jumping`, `AirDash`, `WallSlide`, `GlideHover`,
+      `SlashCombo`, `PrismBeam`, `ParryGuard`, `Staggered`, `Defeated`) transitions deterministically
+      via `BalanceMath.next_action_state(current, event)` with zero heap allocations.
+
+  - id: topic_03_math_balancing_and_progression
+    title: Mathematical Balancing, XP Curves & Damage Equations
+    summary: Explicit polynomial XP progression and hyperbolic armor mitigation formulas.
+    content: |
+      ### Experience Progression Formula
+      Level advancement from Level 1 to Level 20 follows:
+      ```text
+      XP(level) = floor(120.0 * (level ^ 2.15) + 80.0)
+      ```
+
+      ### Combat Damage & Elemental Resonance Formula
+      Every attack resolves deterministically via `BalanceMath.calculate_damage`:
+      ```text
+      D = max(1, floor(ATK * motion_value * elem_mult * crit_mult * (1 - DEF / (DEF + 100.0))))
+      ```
+      - **Elemental Advantage (`1.5x`)**: `Solar > Void > Lunar > Solar`.
+      - **Elemental Disadvantage (`0.75x`)**: Reverse polarity.
+      - **Aether Sanctuary (`1.25x`)**: Bonus resonance damage against `Void` entities.
+
+  - id: topic_04_lapis_scene_architecture_and_dsl
+    title: Lapis Godot 4.8+ Scene Architecture & Declarative GDD Builder
+    summary: Constructing the canonical GDD and registering Godot Node schemas using the Two-Tier DSL.
+    content: |
+      In **Tier 2 (`SolvinCodex::Celestine::DSL`)**, the entire Game Design Document—including physics,
+      enemy archetypes (`prism_wisp`, `clockwork_lancer`, `solar_seraph`, `archon_nyx`), 4 world sectors
+      (`SEC-01` through `SEC-04`), and Lapis scene nodes (`CelestineHero`, `PrismLockOnCamera`,
+      `AstralResonanceAltar`)—is constructed declaratively:
+
+      ```crystal
+      gdd = SolvinCodex::Celestine::DSL.canonical_celestine_gdd
+      puts gdd.title                      # => "Project Celestine: Shards of the Astral Spire"
+      puts gdd.all_sectors_ps2_compliant? # => true
+      ```
