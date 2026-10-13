@@ -1,0 +1,162 @@
+id: LAPIS_CHEAT_SHEET
+title: Lapis Quick Reference Cheat Sheet
+summary: Exhaustive high-density cheat sheet for Godot 4.8 GDExtension bindings in Crystal.
+track: 04_reference
+overview: |
+  Lapis empowers developers to build Godot 4.8+ game logic in high-performance Crystal with
+  type-safe nodes, compile-time signals, properties, and two-tier decoupled engine architecture.
+  This reference covers common idioms, math functions, lifecycle hooks, and node queries.
+  A standalone PDF edition is compiled via Typst at `docs/pdf/lapis_quick_reference.pdf`.
+
+related_sources:
+  - "docs/typst/lapis_quick_reference.typ"
+  - "docs/pdf/lapis_quick_reference.pdf"
+  - "AGENTS.md"
+
+sections:
+  - id: topic_01_node_declaration
+    title: 1. Node Declaration DSL
+    summary: Declare and register custom Godot nodes with typed inheritance.
+    content: |
+      Use the `node` macro to declare game entities inheriting from Godot engine classes:
+      ```crystal
+      require "lapis"
+
+      node Player < CharacterBody3D do
+        prop speed : Float32 = 12.0
+        prop jump_velocity : Float32 = 4.5
+        signal health_changed(new_hp : Int32)
+        signal died
+
+        on_ready do
+          puts "Player initialized in scene tree"
+        end
+      end
+      ```
+
+  - id: topic_02_properties_and_exports
+    title: 2. Properties & Godot Inspector Exports
+    summary: Expose typed properties directly into the Godot editor with zero reflection overhead.
+    content: |
+      Properties declared via `prop` are synthesized at compile time with GDExtension metadata:
+      ```crystal
+      # Primitive types
+      prop max_hp : Int32 = 100
+      prop gravity : Float32 = 9.8
+      prop is_alive : Bool = true
+      prop character_name : String = "Hero"
+
+      # Engine math types
+      prop spawn_point : Vector3 = Vector3.ZERO
+      prop tint : Color = Color.WHITE
+
+      # Engine resources
+      prop texture : Texture2D?
+      ```
+
+  - id: topic_03_signals_and_events
+    title: 3. Signals & Event Binding
+    summary: Define, emit, and connect strongly-typed signals across scene nodes.
+    content: |
+      Signals allow decoupled pub/sub event distribution across nodes:
+      ```crystal
+      # Definition
+      signal score_awarded(points : Int32)
+      signal checkpoint_reached(id : String)
+
+      # Emission
+      emit_signal(:score_awarded, 100)
+      emit_signal(:checkpoint_reached, "zone_1")
+
+      # Connection with closure
+      target.connect("score_awarded") do |pts|
+        handle_score(pts.as_i64.to_i32)
+      end
+      ```
+
+  - id: topic_04_lifecycle_hooks
+    title: 4. Frame & Physics Lifecycle Hooks
+    summary: Process idle render frames, fixed physics steps, and scene tree transitions.
+    content: |
+      Lapis provides idiomatic block callbacks for engine loop events:
+      ```crystal
+      # Idle/Render frame process (variable delta)
+      on_process do |delta|
+        rotate_y(Float32.new(delta * 1.5))
+      end
+
+      # Physics process (fixed tick rate, default 60Hz)
+      on_physics_process do |delta|
+        handle_movement(delta)
+      end
+
+      # Scene tree notifications
+      on_enter_tree { setup_listeners }
+      on_exit_tree  { teardown_listeners }
+      ```
+
+  - id: topic_05_character_body_movement
+    title: 5. CharacterBody3D Movement & Physics
+    summary: Implement standard 3D character controller movement with ground detection.
+    content: |
+      Example character controller physics loop:
+      ```crystal
+      def handle_movement(delta : Float64)
+        dir = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+        
+        vel = velocity
+        vel.x = dir.x * speed
+        vel.z = dir.y * speed
+
+        unless is_on_floor
+          vel.y -= gravity * Float32.new(delta)
+        end
+
+        self.velocity = vel
+        move_and_slide
+      end
+      ```
+
+  - id: topic_06_scene_tree_queries
+    title: 6. Scene Tree Navigation & Node Queries
+    summary: Find, instantiate, and safely dispose of scene tree nodes.
+    content: |
+      Navigate the Godot scene hierarchy with compile-time casting:
+      ```crystal
+      # Query relative node with casting
+      camera = get_node("Camera3D").as(Camera3D)
+      hud = find_child("HUD", recursive: true)
+
+      # Instantiating and adding packed scenes
+      bullet = bullet_scene.instantiate.as(Node3D)
+      get_parent.add_child(bullet)
+      bullet.global_position = muzzle.global_position
+
+      # Destruction
+      queue_free
+      ```
+
+  - id: topic_07_vectors_and_math
+    title: 7. Vectors & Engine Math DSL
+    summary: Optimized vector math operations with zero allocation overhead.
+    content: |
+      Vector2 and Vector3 operations:
+      ```crystal
+      v1 = Vector3.new(1.0, 2.0, 3.0)
+      v2 = Vector3.FORWARD
+
+      dist = v1.distance_to(v2)
+      dir  = (v2 - v1).normalized
+      dot  = v1.dot(v2)
+      cross = v1.cross(v2)
+      blend = v1.lerp(v2, 0.5)
+      ```
+
+  - id: topic_08_two_tier_codex_rules
+    title: 8. Two-Tier Engine Codex Rules
+    summary: Golden rules for building high-performance Godot extensions in Crystal.
+    content: |
+      - **Tier 1 (Engine)**: Pure algorithms, zero macro bloat, no dynamic reflection, high throughput.
+      - **Tier 2 (DSL)**: Fluent builders, compile-time AST macros, declarative syntax.
+      - **Hot Path Rule**: Zero heap allocations inside `on_process` or `on_physics_process`.
+      - **Target Rule**: Lapis PRs target Godot branch `4.8-dev7`, never `main`/`master`.
