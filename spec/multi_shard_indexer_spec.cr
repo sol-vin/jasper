@@ -11,7 +11,7 @@ describe Jasper::MultiShardIndexer do
     org_index.title.should eq("Test Org Docs")
     org_index.total_shards.should eq(1)
     org_index.shards.first.name.should eq("jasper")
-    org_index.shards.first.version.should eq("0.1.0")
+    org_index.shards.first.version.should eq(Jasper::VERSION)
 
     summary = org_index.to_markdown_summary
     summary.should contain("# Test Org Docs")
