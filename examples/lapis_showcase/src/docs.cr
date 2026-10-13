@@ -4,100 +4,108 @@
 # ==============================================================================
 
 {% unless flag?(:release) %}
-module Lapis
-  # The `Lapis::Quickstart` module is the authoritative technical reference and documentation guide.
-  #
-  # ## Learning Tracks & Topic Index
-  #
-  # The documentation is paced into 2 distinct tracks:
-  #
-  # ### 1. Getting started (`A_GETTING_STARTED`)
-  # <table>
-  #   <thead>
-  #     <tr>
-  #       <th>Submodule</th>
-  #       <th>Title</th>
-  #       <th>Description</th>
-  #     </tr>
-  #   </thead>
-  #   <tbody>
-  #     <tr>
-  #       <td><code>FIVE_MINUTE_QUICKSTART</code></td>
-  #       <td><strong>Getting Started with Lapis in 5 Minutes</strong></td>
-  #       <td>Complete hands-on tutorial to building your first Godot 4.8 game entity with Crystal.</td>
-  #     </tr>
-  #   </tbody>
-  # </table>
-  #
-  # ### 2. Advanced patterns (`B_ADVANCED_PATTERNS`)
-  # <table>
-  #   <thead>
-  #     <tr>
-  #       <th>Submodule</th>
-  #       <th>Title</th>
-  #       <th>Description</th>
-  #     </tr>
-  #   </thead>
-  #   <tbody>
-  #     <tr>
-  #       <td><code>TWO_TIER_CODEX</code></td>
-  #       <td><strong>The Two-Tier Architecture Pattern</strong></td>
-  #       <td>Why and how to separate game logic engines from declarative Godot macros.</td>
-  #     </tr>
-  #   </tbody>
-  # </table>
-  #
-  module Quickstart
-    # **Quick-Start Commands**: Essential commands for building, running, and testing.
+  module Lapis
+    # The `Lapis::Quickstart` module is the authoritative technical reference and documentation guide.
     #
-    # #### Getting Started Commands:
-    # ```bash
-    # shards install
-    # crystal spec
-    # crystal docs
-    # ```
-    def self.topic_01_quick_start : Nil; end
+    # ## Learning Tracks & Topic Index
+    #
+    # The documentation is paced into 2 distinct tracks:
+    #
+    # ### 1. Getting started (`A_GETTING_STARTED`)
+    # <table>
+    #   <thead>
+    #     <tr>
+    #       <th>Submodule</th>
+    #       <th>Title</th>
+    #       <th>Description</th>
+    #     </tr>
+    #   </thead>
+    #   <tbody>
+    #     <tr>
+    #       <td><code>FIVE_MINUTE_QUICKSTART</code></td>
+    #       <td><strong>Getting Started with Lapis in 5 Minutes</strong></td>
+    #       <td>Complete hands-on tutorial to building your first Godot 4.8 game entity with Crystal.</td>
+    #     </tr>
+    #   </tbody>
+    # </table>
+    #
+    # ### 2. Advanced patterns (`B_ADVANCED_PATTERNS`)
+    # <table>
+    #   <thead>
+    #     <tr>
+    #       <th>Submodule</th>
+    #       <th>Title</th>
+    #       <th>Description</th>
+    #     </tr>
+    #   </thead>
+    #   <tbody>
+    #     <tr>
+    #       <td><code>TWO_TIER_CODEX</code></td>
+    #       <td><strong>The Two-Tier Architecture Pattern</strong></td>
+    #       <td>Why and how to separate game logic engines from declarative Godot macros.</td>
+    #     </tr>
+    #   </tbody>
+    # </table>
+    #
+    module Quickstart
+      # **Quick-Start Commands**: Essential commands for building, running, and testing.
+      #
+      # #### Getting Started Commands:
+      # ```bash
+      # shards install
+      # crystal spec
+      # crystal docs
+      # ```
+      def self.topic_01_quick_start : Nil; end
 
-    # **Learning Tracks & Reading Paths**: Curated reading order from beginner to advanced.
-    #
-    # #### Structured Learning Tracks
-    #
-    # ##### 1. Getting started (`A_GETTING_STARTED`)
-    # - `A_GETTING_STARTED::FIVE_MINUTE_QUICKSTART`: **Getting Started with Lapis in 5 Minutes** &mdash; Complete hands-on tutorial to building your first Godot 4.8 game entity with Crystal.
-    #
-    # ##### 2. Advanced patterns (`B_ADVANCED_PATTERNS`)
-    # - `B_ADVANCED_PATTERNS::TWO_TIER_CODEX`: **The Two-Tier Architecture Pattern** &mdash; Why and how to separate game logic engines from declarative Godot macros.
-    #
-    def self.topic_02_reading_paths : Nil; end
+      # **Learning Tracks & Reading Paths**: Curated reading order from beginner to advanced.
+      #
+      # #### Structured Learning Tracks
+      #
+      # ##### 1. Getting started (`A_GETTING_STARTED`)
+      # - `A_GETTING_STARTED::FIVE_MINUTE_QUICKSTART`: **Getting Started with Lapis in 5 Minutes** &mdash; Complete hands-on tutorial to building your first Godot 4.8 game entity with Crystal.
+      #
+      # ##### 2. Advanced patterns (`B_ADVANCED_PATTERNS`)
+      # - `B_ADVANCED_PATTERNS::TWO_TIER_CODEX`: **The Two-Tier Architecture Pattern** &mdash; Why and how to separate game logic engines from declarative Godot macros.
+      #
+      def self.topic_02_reading_paths : Nil; end
 
-    # **Master Table of Contents**: Complete hierarchical topic index.
-    #
-    # #### Complete Documentation Index
-    #
-    # ##### `A_GETTING_STARTED`
-    # - `A_GETTING_STARTED::FIVE_MINUTE_QUICKSTART`: **Getting Started with Lapis in 5 Minutes** &mdash; Complete hands-on tutorial to building your first Godot 4.8 game entity with Crystal.
-    #
-    # ##### `B_ADVANCED_PATTERNS`
-    # - `B_ADVANCED_PATTERNS::TWO_TIER_CODEX`: **The Two-Tier Architecture Pattern** &mdash; Why and how to separate game logic engines from declarative Godot macros.
-    #
-    def self.topic_03_table_of_contents : Nil; end
+      # **Master Table of Contents**: Complete hierarchical topic index.
+      #
+      # #### Complete Documentation Index
+      #
+      # ##### `A_GETTING_STARTED`
+      # - `A_GETTING_STARTED::FIVE_MINUTE_QUICKSTART`: **Getting Started with Lapis in 5 Minutes** &mdash; Complete hands-on tutorial to building your first Godot 4.8 game entity with Crystal.
+      #
+      # ##### `B_ADVANCED_PATTERNS`
+      # - `B_ADVANCED_PATTERNS::TWO_TIER_CODEX`: **The Two-Tier Architecture Pattern** &mdash; Why and how to separate game logic engines from declarative Godot macros.
+      #
+      def self.topic_03_table_of_contents : Nil; end
 
-    # :nodoc:
-    def self.quick_start : Nil; topic_01_quick_start; end
-    # :nodoc:
-    def self.reading_paths : Nil; topic_02_reading_paths; end
-    # :nodoc:
-    def self.table_of_contents : Nil; topic_03_table_of_contents; end
+      # :nodoc:
+      def self.quick_start : Nil
+        topic_01_quick_start
+      end
+
+      # :nodoc:
+      def self.reading_paths : Nil
+        topic_02_reading_paths
+      end
+
+      # :nodoc:
+      def self.table_of_contents : Nil
+        topic_03_table_of_contents
+      end
+    end
   end
-end
 
-require "./docs/a_getting_started/five_minute_quickstart"
-require "./docs/b_advanced_patterns/two_tier_codex"
+  require "./docs/a_getting_started/five_minute_quickstart"
+  require "./docs/b_advanced_patterns/two_tier_codex"
 
-alias Quickstart = ::Lapis::Quickstart
-alias LapisGuide = ::Lapis::Quickstart
+  alias Quickstart = ::Lapis::Quickstart
+  alias LapisGuide = ::Lapis::Quickstart
 
-module Godot
-  alias Docs = ::Lapis::Docs
-end
+  module Godot
+    alias Docs = ::Lapis::Docs
+  end
 {% end %}

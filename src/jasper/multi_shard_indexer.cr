@@ -23,7 +23,7 @@ module Jasper
       @description : String,
       @path : String,
       @doc_count : Int32,
-      @documents : Array(Indexer::DocumentEntry) = [] of Indexer::DocumentEntry
+      @documents : Array(Indexer::DocumentEntry) = [] of Indexer::DocumentEntry,
     )
     end
   end
@@ -43,7 +43,7 @@ module Jasper
       @generated_at : Time,
       @total_shards : Int32,
       @total_docs : Int32,
-      @shards : Array(ShardDocMetadata) = [] of ShardDocMetadata
+      @shards : Array(ShardDocMetadata) = [] of ShardDocMetadata,
     )
     end
 
