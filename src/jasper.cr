@@ -8,6 +8,7 @@ require "./jasper/dsl"
 require "./jasper/validator"
 require "./jasper/indexer"
 require "./jasper/generator"
+require "./jasper/multi_shard_indexer"
 
 module Jasper
 end
