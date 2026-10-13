@@ -131,6 +131,16 @@ end
 Jasper.register_plugin(DiagramPlugin.new)
 ```
 
+## Showcase Examples
+
+### Getting Started with Lapis in 5 Minutes
+Inspect the turnkey showcase project under `examples/lapis_showcase/`:
+- **Paced Curriculum**: Step-by-step introduction covering prerequisites, project layout, CharacterBody3D node creation, input mapping, and the Sol-Vin Two-Tier Codex.
+- **Run the Showcase**:
+  ```bash
+  crystal run examples/lapis_showcase/run.cr
+  ```
+
 ---
 
 ## License
