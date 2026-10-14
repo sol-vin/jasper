@@ -1,0 +1,128 @@
+id: CROWBAR_COOKBOOK
+title: "Crowbar Recipe: Deterministic Corpus Regression Gates & Structure-Preserving Fuzzing"
+summary: Two-tier mutation engines, Crowbar::Core::CorpusRunner, and declarative Crowbar.corpus_gate specs under a 60s watchdog budget.
+track: 05_hardening_cookbook
+overview: |
+  `sol-vin/crowbar` is the Sol-Vin organization's deterministic mutation fuzzing and corpus regression shard.
+  Approved under RFC Discussion #116 (`[AS-1]`), Crowbar pairs a high-throughput Tier 1 mutation and seed
+  replay engine (`Crowbar::Core::CorpusRunner`) with an expressive Tier 2 declarative DSL (`Crowbar.define`
+  and `Crowbar.corpus_gate`) designed to run directly inside `crystal spec` under a mandatory `<= 60.seconds`
+  watchdog budget.
+
+related_sources:
+  - "repos/crowbar/src/crowbar/core/corpus_runner.cr"
+  - "repos/crowbar/src/crowbar/dsl/corpus_gate_builder.cr"
+  - "repos/crowbar/src/crowbar/dsl/builder.cr"
+  - "repos/crowbar/spec/corpus_gate_spec.cr"
+
+sections:
+  - id: topic_01_tier_one_corpus_runner
+    title: "Tier 1 Core Engine: CorpusRunner, CorpusSeed & Delta Minimization"
+    summary: Deterministic seed replay, SHA-256 payload fingerprinting, and crash shrinking in Crowbar::Core.
+    content: |
+      Crowbar's Tier 1 engine layer (`src/crowbar/core/`) executes byte-level mutations and corpus replay
+      without DSL overhead:
+
+      - **`Crowbar::Core::CorpusSeed`**: Immutable seed descriptor computing a deterministic SHA-256 hex digest
+        and Base64 payload representation for raw buffers, hex strings, files, or campaign crash artifacts.
+      - **`Crowbar::Core::CorpusRunner`**: Executes static seed replay followed by deterministic PRNG-seeded
+        mutation iterations. Enforces `MAX_WATCHDOG_BUDGET = 60.seconds` and emits periodic liveness heartbeats.
+      - **`Crowbar::Minimizer::Reducer`**: Automatically shrinks failing inputs via delta debugging to isolate
+        the minimal byte slice triggering a regression.
+      - **`Crowbar::Core::CorpusGateReport`**: Serializable JSON and Markdown report detailing passed seeds,
+        caught expected exceptions, unexpected regressions, and elapsed execution time.
+
+  - id: topic_02_declarative_corpus_gate_dsl
+    title: "Tier 2 Declarative Spec DSL: Crowbar.corpus_gate"
+    summary: Embedding deterministic fuzzing and crash reproducer replay directly inside crystal spec.
+    content: |
+      `Crowbar.corpus_gate` (and `Crowbar.corpus_gate!`) yields a `Crowbar::DSL::CorpusGateBuilder` that
+      configures seeds, structure-preserving rules, expected domain errors, and invariant assertions:
+    examples:
+      - |
+        ```crystal
+        require "spec"
+        require "crowbar"
+        require "json"
+
+        describe "JSON Protocol Parser Corpus Gate" do
+          it "replays crash reproducers and deterministic mutations within 60s budget" do
+            report = Crowbar.corpus_gate("JSON Parser Gate") do |gate|
+              gate.watchdog_budget 60.seconds
+              gate.seed 0xC0FFEE_u64
+              gate.iterations 25
+              gate.minimize_on_failure true
+
+              # Structure-preserving JSON mutations
+              gate.preserve :json do |rule|
+                rule.mutate_strings(true)
+              end
+
+              # Domain errors that are expected and safe
+              gate.expected_errors JSON::ParseException, ArgumentError
+
+              # Baseline corpus & historical crash reproducers
+              gate.corpus %({"cmd": "ping", "seq": 1}), id: "baseline_ping"
+              gate.reproducer_base64 "eyJjbWQiOiAib3ZlcmZsb3ciLCAic2VxIjogOTk5OTk5OTk5fQ==", id: "issue_42"
+              gate.reproducer_hex "7b2261223a5b312c322c335d7d", id: "hex_array"
+
+              gate.execute do |buf|
+                JSON.parse(String.new(buf))
+              end
+            end
+
+            report.passed?.should be_true
+          end
+        end
+        ```
+
+  - id: topic_03_scoped_mutation_and_fixups
+    title: "Scoped Byte-Range Mutation & Header Fixup Pipelines"
+    summary: Pinpointing binary protocol regions and recomputing checksums with Crowbar.define.
+    content: |
+      When fuzzing binary containers (such as Bakelite `.bkl` archives or network packets), pure random
+      bit-flips immediately fail magic-header or CRC32 checks before reaching deep parser logic. Crowbar
+      solves this with `scope` and `fixup` blocks:
+    examples:
+      - |
+        ```crystal
+        fuzzer = Crowbar.define do
+          seed 0x1337_u64
+          pattern :many
+
+          # Mutate only the body payload after the 8-byte magic header
+          scope :body, bytes: 8...64 do
+            weight 0.9
+            mutate :byte_flip, :boundary_number, :bit_walk
+          end
+
+          # Recompute the 4-byte little-endian length field at offset 8 after mutation
+          fixup do |buffer|
+            next if buffer.size < 12
+            payload_len = (buffer.size - 12).to_u32
+            IO::ByteFormat::LittleEndian.encode(payload_len, buffer[8, 4])
+          end
+        end
+        ```
+
+  - id: topic_04_sixty_second_watchdog_enforcement
+    title: "Hardening Recipe: Enforcing the Inviolable 60-Second Watchdog Law"
+    summary: Preventing infinite loops and hanging fuzzing campaigns with strict budget ceilings.
+    content: |
+      In accordance with the Sol-Vin **Inviolable 60-Second Watchdog Law**, `Crowbar::Core::CorpusRunner`
+      validates `@watchdog_budget <= MAX_WATCHDOG_BUDGET` (`60.seconds`) prior to execution and checks elapsed
+      monotonic time before every seed and mutation iteration:
+    examples:
+      - |
+        ```crystal
+        # Attempting to configure a budget > 60s raises WatchdogBudgetError immediately
+        expect_raises(Crowbar::Core::WatchdogBudgetError) do
+          Crowbar.corpus_gate("Invalid Budget") do |gate|
+            gate.watchdog_budget 120.seconds
+            gate.corpus "test"
+            gate.execute { |_| }
+          end
+        end
+        ```
+    pitfalls:
+      - "Never catch standard `Exception` blindly inside `gate.execute` without re-raising unexpected errors; instead declare safe parser exceptions via `gate.expected_errors` so true crashes and `IndexError` / `OverflowError` regressions are caught and minimized."

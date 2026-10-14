@@ -141,6 +141,15 @@ Inspect the turnkey showcase project under `examples/lapis_showcase/`:
   crystal run examples/lapis_showcase/run.cr
   ```
 
+### Multi-Shard Two-Tier Crystal DSL & Hardening Cookbook (`05_hardening_cookbook`)
+Inspect the canonical multi-shard cookbook track under `docs_src/05_hardening_cookbook/` and programmatic catalog in `src/jasper/cookbook.cr`:
+- **Covered Shards**: `sol-vin/carbon`, `sol-vin/crowbar`, `sol-vin/bakelite`, and `sol-vin/opal`.
+- **Programmatic Catalog DSL**:
+  ```crystal
+  catalog = Jasper::Cookbook.canonical_catalog
+  puts catalog.to_markdown_table
+  ```
+
 ---
 
 ## License

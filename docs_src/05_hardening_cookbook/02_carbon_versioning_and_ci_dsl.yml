@@ -1,0 +1,110 @@
+id: CARBON_COOKBOOK
+title: "Carbon Recipe: Monotonic Versioning, Git Hooks & CI Standardization DSL"
+summary: Two-tier patterns in sol-vin/carbon for commit-count synchronization, squash-resilient bumping, and workflow standardization.
+track: 05_hardening_cookbook
+overview: |
+  `sol-vin/carbon` enforces the organization-wide Lapis-style versioning standard (`<major>.<minor>.<commit_count>`),
+  human-friendly YAML changelogs, README badge synchronization, Git hook automation, and GitHub Actions CI
+  workflow standardization. Its architecture cleanly separates Tier 1 repository inspection and template
+  engines from Tier 2 declarative builders and compile-time macros.
+
+related_sources:
+  - "repos/carbon/src/carbon/dsl.cr"
+  - "repos/carbon/src/carbon/ci/builder.cr"
+  - "repos/carbon/src/carbon/ci/standardizer.cr"
+  - "repos/carbon/src/carbon/hooks/builder.cr"
+
+sections:
+  - id: topic_01_tier_one_vcs_and_standardizer
+    title: "Tier 1 Core Engine: Version Structs, VCS Inspection & CI Standardizer"
+    summary: Pure value types and deterministic repository synchronizers in Carbon.
+    content: |
+      Carbon's Tier 1 layer performs version arithmetic, Git history inspection, and workflow generation
+      using pure, testable primitives without global state:
+
+      - **`Carbon::Version`**: Immutable struct representing `major`, `minor`, `commit`, `prerelease`, and
+        `build_metadata`. Provides `bump_commit(count)`, `bump_minor`, `bump_major`, and semantic comparison.
+      - **`Carbon::VCS::Base` & `Carbon::VCS::Git` / `Carbon::VCS::Mock`**: Abstract VCS adapter interface
+        allowing unit specs to test commit counting and staging in memory via `VCS::Mock` while production
+        repositories query `VCS::Git`.
+      - **`Carbon::FileManager`**: Non-destructive manifest synchronizer that updates `shard.yml` and
+        `src/**/version.cr` while preserving comments and formatting.
+      - **`Carbon::CI::WorkflowStandardizer` & `Carbon::CI::WorkflowTemplate`**: Pure workflow generator
+        producing standardized `.github/workflows/ci.yml` pipelines from a `Carbon::CI::WorkflowConfig` struct.
+
+  - id: topic_02_declarative_ci_and_hooks_dsl
+    title: "Tier 2 Declarative Builders: Carbon.ci and Carbon.hooks"
+    summary: Configuring GitHub Actions workflows and Git lifecycle hooks with scoped block receivers.
+    content: |
+      Tier 2 wraps the Tier 1 standardizers in fluent block builders (`Carbon::CI::Builder` and
+      `Carbon::Hooks::Builder`) invoked via `Carbon.ci` and `Carbon.hooks`:
+    examples:
+      - |
+        ```crystal
+        require "carbon"
+
+        # Declaratively standardize .github/workflows/ci.yml
+        ci_report = Carbon.ci(".") do |ci|
+          ci.workflow_name("CI")
+            .branches("main")
+            .os_matrix("ubuntu-latest")
+            .crystal_version("latest")
+            .shard_caching(true)
+            .format_check(true)
+            .spec_gate(true)
+            .concurrency_cancel(true)
+        end
+
+        # Declaratively install automated Git hooks (post-commit & post-merge)
+        installed_hooks = Carbon.hooks(".") do |hooks|
+          hooks.post_commit
+          hooks.post_merge
+          hooks.stage_changes(true)
+        end
+        ```
+
+  - id: topic_03_compile_time_version_macro
+    title: "Compile-Time Version Synthesis (Carbon.version!)"
+    summary: Zero-overhead compile-time shard.yml parsing that eliminates manual version constants.
+    content: |
+      Instead of maintaining duplicate version strings across source files, `Carbon.version!` reads
+      `shard.yml` at compile time using `read_file?` and synthesizes typed constants and helper methods
+      directly into the enclosing module:
+    examples:
+      - |
+        ```crystal
+        require "carbon"
+
+        module MyShard
+          # Reads shard.yml at compile time and defines:
+          # VERSION, MAJOR_VERSION, MINOR_VERSION, COMMIT_VERSION,
+          # MyShard.version, and MyShard.carbon_version
+          Carbon.version!
+        end
+
+        puts MyShard::VERSION        # => "0.1.44"
+        puts MyShard::COMMIT_VERSION # => 44
+        ```
+
+  - id: topic_04_squash_resilient_monotonic_gate
+    title: "Hardening Recipe: Squash-Resilient Monotonic Commit Gates"
+    summary: Preventing version number regressions across squash merges and verifying sync in CI.
+    content: |
+      When pull requests are squash-merged, the linear commit count on `main` increases by 1 even if the
+      feature branch had multiple commits. `Carbon.bump!` and `Carbon.check` enforce monotonic progression:
+
+      - **`Carbon.bump!(:commit)`**: Computes `Math.max(git.commit_count, head_commit) + 1`, guaranteeing
+        the commit component in `shard.yml` strictly increases and never regresses.
+      - **`Carbon.check(".")`**: Returns a `NamedTuple(synced: Bool, shard_version: Version?, git_commits: Int32, diff: Int32)`
+        certifying that `shard_version.commit >= git_commits`.
+    examples:
+      - |
+        ```crystal
+        status = Carbon.check(".")
+        unless status[:synced]
+          STDERR.puts "Version out of sync! shard=#{status[:shard_version]} commits=#{status[:git_commits]}"
+          Carbon.sync!(".", stage: true)
+        end
+        ```
+    pitfalls:
+      - "Do not hardcode version strings in specs (e.g. `should eq(\"0.1.0\")`); always assert against `MyShard::VERSION` so specs remain green after `carbon bump`."

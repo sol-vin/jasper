@@ -1,0 +1,128 @@
+id: BAKELITE_COOKBOOK
+title: "Bakelite Recipe: Compile-Time VFS Macros, Binary Containers & Archive Integrity"
+summary: Two-tier virtual filesystems, single-pass manifest baking, 32-byte container trailers, and Crowbar-hardened archive verification.
+track: 05_hardening_cookbook
+overview: |
+  `sol-vin/bakelite` provides a zero-allocation compile-time virtual filesystem (VFS) and stream-backed binary
+  container engine (`.bkl` archives and self-contained executable overlays). Approved under RFC Discussion #116
+  (`[AS-2]`), Bakelite combines single-pass compile-time baking macros with deterministic content addressing,
+  per-chunk CRC32/SHA-256 verification, and 32-byte trailer validation hardened against malformed inputs via
+  `Crowbar.corpus_gate`.
+
+related_sources:
+  - "repos/bakelite/src/bakelite.cr"
+  - "repos/bakelite/src/bakelite/dsl.cr"
+  - "repos/bakelite/src/bakelite/fs.cr"
+  - "repos/bakelite/src/bakelite/container/format.cr"
+  - "repos/bakelite/src/bakelite/container/reader.cr"
+
+sections:
+  - id: topic_01_tier_one_vfs_and_containers
+    title: "Tier 1 Core Engine: Union-Mount Registry, Chunked FileIO & Binary Trailers"
+    summary: Priority-ordered virtual volumes, O(chunk_size) streaming decompression, and 32-byte BKLEND trailers.
+    content: |
+      Bakelite's Tier 1 runtime (`src/bakelite/`) manages inlined and stream-backed assets with predictable
+      memory bounds:
+
+      - **`Bakelite::FS::Registry` & `Bakelite::Volume`**: Priority-ordered union filesystem router. Higher-priority
+        volumes seamlessly shadow lower-priority volumes at matching mount prefixes, enabling mod overlays and
+        hot-patch archives over baked defaults.
+      - **`Bakelite::BakedItem` vs `Bakelite::StoredItem`**: `BakedItem` holds a zero-copy `Bytes` slice in
+        static memory (`StorageMode::Bake`); `StoredItem` streams deflate-compressed `Chunk` slices on demand
+        through `Bakelite::FileIO` in $O(\text{chunk\_size})$ RAM (`StorageMode::Store`).
+      - **`Bakelite::Container::Trailer` (`32 bytes`)**: Positioned at the final 32 bytes of a `.bkl` container
+        or appended binary (`volume_start_offset : UInt64`, `index_offset : UInt64`, `index_size : UInt64`,
+        `version : UInt16 = 1`, `magic : "BKLEND"`).
+
+  - id: topic_02_tier_two_bake_and_manifest_macros
+    title: "Tier 2 Declarative Macros: Single-Pass Asset Baking & Volume Mounts"
+    summary: Using bake, store, embed_folder, volume, and bake_manifest for sub-200ms compile-time embedding.
+    content: |
+      Bakelite's Tier 2 DSL (`Bakelite::DSL`) invokes `compile_helper.cr` in a single batch pass during
+      compilation to inline or chunk assets into typed volumes:
+    examples:
+      - |
+        ```crystal
+        require "bakelite"
+
+        module GameAssets
+          include Bakelite::FS
+
+          # Declare a high-priority UI volume with custom mount point
+          volume :ui, mount: "ui", priority: 10, compress: :deflate do
+            bake "assets/ui/theme.json", as_path: "theme.json"
+            embed_folder "assets/icons", prefix: "icons", exclude: ["*.psd", "*.tmp"]
+          end
+
+          # Or bake an entire multi-volume asset hierarchy in one pass from YAML
+          # bake_manifest "bakelite.yml"
+        end
+
+        # Zero-copy read from union VFS
+        theme_json = GameAssets["ui/theme.json"].to_s
+        ```
+
+  - id: topic_03_deterministic_archive_verification
+    title: "Hardening Recipe: Deterministic Archive Packing & Integrity Verification"
+    summary: Verifying magic headers, 32-byte trailers, CRC32 chunk checksums, and SHA-256 content digests.
+    content: |
+      When packing external `.bkl` archives via `Bakelite.pack` or mounting external overlays via
+      `Bakelite.fs.mount_file`, every container undergoes multi-layer integrity checks:
+
+      1. **Trailer Boundary Check**: Verifies file size $\ge 32\text{ bytes}$, `MAGIC_TRAILER == "BKLEND"`,
+         and `FORMAT_VERSION == 1_u16`.
+      2. **Volume Header Check**: Seeks to `trailer.volume_start_offset` and verifies the 8-byte `"BAKELITE"`
+         magic header.
+      3. **Per-Chunk & Per-Item Checksums**: Each `Chunk` records its uncompressed and compressed byte sizes
+         alongside a `crc32 : UInt32` checksum (and deterministic SHA-256 content addressing via
+         `Bakelite.verify_archive`), ensuring truncated or bit-flipped chunks raise `CorruptContainerError`
+         or `ChecksumMismatchError` before consumption.
+    examples:
+      - |
+        ```crystal
+        # Pack a directory into a standalone .bkl archive
+        bytes_written = Bakelite.pack(
+          target: "build/patch_01.bkl",
+          source_dir: "assets/patch_01",
+          volume: :patch,
+          mount_point: "data",
+          priority: 100,
+          append: false
+        )
+
+        # Verify trailer presence and mount overlay into global registry
+        if Bakelite::Container::Reader.has_trailer?("build/patch_01.bkl")
+          Bakelite.fs.mount_file("build/patch_01.bkl", priority: 100)
+        end
+        ```
+
+  - id: topic_04_fuzzing_containers_with_crowbar
+    title: "Cross-Shard Recipe: Fuzzing Bakelite Containers with Crowbar.corpus_gate"
+    summary: Combining Bakelite container readers with Crowbar byte-range mutations inside crystal spec.
+    content: |
+      By pairing `Bakelite::Container::Reader` with `Crowbar.corpus_gate`, container parsers are continuously
+      tested against truncated trailers, overflowed index offsets, and corrupted deflate streams:
+    examples:
+      - |
+        ```crystal
+        Crowbar.corpus_gate("Bakelite Reader Hardening") do |gate|
+          gate.watchdog_budget 30.seconds
+          gate.seed 0xBA4E_u64
+          gate.iterations 40
+          gate.expected_errors(
+            Bakelite::InvalidTrailerError,
+            Bakelite::CorruptContainerError,
+            IO::EOFError
+          )
+
+          gate.corpus valid_bkl_bytes, id: "valid_bkl_archive"
+
+          gate.execute do |bytes|
+            # Ensure mutated container bytes never cause unhandled panics or OOM allocations
+            io = IO::Memory.new(bytes)
+            Bakelite::Container::Trailer.read(io)
+          end
+        end
+        ```
+    pitfalls:
+      - "Always bound allocation sizes when reading length-prefixed strings or chunk tables from untrusted `.bkl` files so corrupted `UInt32` counts cannot trigger excessive heap allocations."
