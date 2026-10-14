@@ -1,0 +1,112 @@
+id: COOKBOOK_OVERVIEW
+title: "Two-Tier Crystal DSL & Hardening Cookbook: Multi-Shard Architecture"
+summary: Unified architectural reference and hardening blueprints across Carbon, Crowbar, Bakelite, and Opal.
+track: 05_hardening_cookbook
+overview: |
+  The **Two-Tier Crystal DSL & Hardening Cookbook** establishes the canonical engineering recipes for
+  building, verifying, and hardening Sol-Vin Crystal shards. Approved under RFC Discussion #116
+  (*Ecosystem-Wide Crowbar Corpus Regression Gate & Bakelite Deterministic Archive Signing*), this track
+  documents how `sol-vin/carbon`, `sol-vin/crowbar`, `sol-vin/bakelite`, and `sol-vin/opal` decouple
+  pure, deterministic Tier 1 engines from expressive Tier 2 declarative builders while enforcing
+  cryptographic integrity, mutation regression gates, and the inviolable 60-second watchdog law.
+
+related_sources:
+  - "AGENTS.md"
+  - "src/jasper/cookbook.cr"
+  - "src/jasper/multi_shard_indexer.cr"
+  - "docs_src/03_dsl_codex/01_two_tier_architecture.yml"
+
+sections:
+  - id: topic_01_multi_shard_topology
+    title: "Multi-Shard Two-Tier Architecture Matrix"
+    summary: Mapping Tier 1 algorithmic engines to Tier 2 declarative builders across Carbon, Crowbar, Bakelite, and Opal.
+    content: |
+      Every shard in the Sol-Vin support and tooling ecosystem adheres to the **Two-Tier Engine & Declarative Builder**
+      codex. Tier 1 engines operate on strongly-typed structs, static byte slices, and deterministic state transitions
+      without syntax bloat; Tier 2 builders expose ergonomic block receivers (`yield ctx`), fluent chains, and
+      compile-time AST macros.
+
+      | Shard | Tier 1 Core Engine (`core/` or `engine/`) | Tier 2 Declarative DSL (`dsl/` or `macros/`) | Primary Hardening Gate |
+      | :--- | :--- | :--- | :--- |
+      | `sol-vin/carbon` | `Carbon::Version`, `Carbon::VCS::Git`, `Carbon::CI::WorkflowStandardizer`, `Carbon::Hooks::Standardizer` | `Carbon.ci`, `Carbon.hooks`, `Carbon.version!`, `Carbon.bump!` | Monotonic squash-resilient commit count & CI workflow parity |
+      | `sol-vin/crowbar` | `Crowbar::Core::CorpusRunner`, `Crowbar::Core::CorpusSeed`, `Crowbar::Minimizer::Reducer` | `Crowbar.corpus_gate`, `Crowbar.define`, `scope`, `preserve`, `fixup` | Deterministic seed replay & crash minimization under `<= 60s` watchdog |
+      | `sol-vin/bakelite` | `Bakelite::FS::Registry`, `Bakelite::Container::Reader`, `Bakelite::Container::Writer`, `Bakelite::FileIO` | `bake`, `store`, `bake_manifest`, `volume`, `Bakelite.verify_archive` | SHA-256 content addressing, CRC32 chunk verification & 32-byte `BKLEND` trailer validation |
+      | `sol-vin/opal` | `Opal::UI::Buffer`, `Opal::UI::DiffRenderer`, `Opal::TEA::Model`, `Opal::Terminal::ANSIParser` | `Opal::UI.build`, `Opal::UI.split_pane`, `Opal::Input.remap`, `Opal::CLI::App` | Zero-allocation cell diffing, headless `Pilot` assertions & ANSI parser fuzzing |
+      | `sol-vin/jasper` | `Jasper::Generator`, `Jasper::Validator`, `Jasper::MultiShardIndexer`, `Jasper::Cookbook::Catalog` | `Jasper.configure`, `Jasper.define_track`, `Jasper.index_shards`, `Jasper.define_cookbook` | Schema validation, release-guarded doc compilation & cross-shard indexing |
+
+  - id: topic_02_hardening_invariants
+    title: "The Four Ecosystem Hardening Invariants"
+    summary: Mandatory safety, determinism, and liveness invariants enforced across all Sol-Vin Crystal shards.
+    content: |
+      To prevent regressions, silent data corruption, and hanging CI pipelines, all four shards enforce four
+      mutually reinforcing hardening invariants:
+
+      1. **Monotonic Squash-Resilient Versioning (`sol-vin/carbon`)**:
+         Version strings follow `<major>.<minor>.<commit_count>`. Even when feature branches are squash-merged
+         on GitHub, `Carbon.bump!` compares the live `git rev-list --count HEAD` against the `HEAD` manifest
+         to guarantee commit numbers never regress.
+      2. **Deterministic Corpus Regression Gates (`sol-vin/crowbar`)**:
+         Every parser, binary container reader, and escape sequence decoder embeds a `Crowbar.corpus_gate` block
+         inside its standard `crystal spec` suite. Static crash reproducers (Base64, hex, or corpus files) and
+         deterministic PRNG-seeded mutations run on every commit under a strict `<= 60.seconds` watchdog budget.
+      3. **Content-Addressed Virtual Filesystem Signing (`sol-vin/bakelite`)**:
+         Embedded assets and standalone `.bkl` archives combine per-chunk CRC32 checksums with deterministic
+         SHA-256 digests and a 32-byte little-endian `BKLEND` trailer. `Bakelite.verify_archive` validates
+         container structure and payload digests before mounting untrusted overlays.
+      4. **Headless Deterministic TUI Verification (`sol-vin/opal`)**:
+         Terminal interfaces and input remappers separate ANSI/cell rendering (`Opal::UI::Buffer`) from OS TTY
+         handles, enabling `Opal::Testing::Pilot` and `Crowbar.corpus_gate` to verify layout geometry, OSC-8
+         hyperlinks, and malformed CSI/OSC escape resilience in milliseconds without an interactive terminal.
+
+  - id: topic_03_cross_shard_verification_pipeline
+    title: "End-to-End Cross-Shard Hardening Workflow"
+    summary: Composing Carbon, Crowbar, Bakelite, and Opal in a unified CI and release pipeline.
+    content: |
+      The following blueprint illustrates how a Sol-Vin repository combines all four shards during local
+      development and Upsilon CI gate certification:
+    examples:
+      - |
+        ```crystal
+        require "carbon"
+        require "crowbar"
+        require "bakelite"
+        require "opal"
+
+        # 1. Synthesize compile-time version constants from shard.yml via Carbon
+        module MyService
+          Carbon.version!
+        end
+
+        # 2. Verify Bakelite container integrity & fuzz with Crowbar inside crystal spec
+        report = Crowbar.corpus_gate("Bakelite Container Trailer Gate") do |gate|
+          gate.watchdog_budget 30.seconds
+          gate.seed 0x5017_u64
+          gate.iterations 50
+          gate.expected_errors Bakelite::InvalidTrailerError, Bakelite::CorruptContainerError
+
+          gate.corpus "BAKELITE\x01\x00\x00\x00", id: "minimal_header"
+
+          gate.execute do |mutated_bytes|
+            io = IO::Memory.new(mutated_bytes)
+            Bakelite::Container::Trailer.read(io)
+          end
+        end
+
+        # 3. Render verification summary in a declarative Opal split-pane view
+        output = Opal::UI.render(width: 80, height: 10) do
+          hsplit(ratio: 0.5) do
+            pane(title: "Service Version", border: :rounded) do
+              text "Version: v#{MyService.version}"
+            end
+            pane(title: "Corpus Gate", border: :rounded) do
+              text "Seeds Passed: #{report.passed_count}/#{report.total_executions}"
+            end
+          end
+        end
+        ```
+    pitfalls:
+      - "Never invoke shell commands or external processes inside a Tier 1 hot loop; keep I/O and process spawning in Tier 2 CLI/builder layers or compile-time helpers."
+      - "Never configure a Crowbar corpus gate with a watchdog budget exceeding 60 seconds; Crowbar::Core::CorpusRunner raises WatchdogBudgetError immediately."
+    faqs:
+      - q: "Why are documentation classes wrapped in a compile-time flag?(:release) guard?"
+        a: "Jasper wraps generated Crystal documentation modules in a release flag guard so `crystal docs` indexes the full guide hierarchy while `crystal build --release` compiles zero documentation symbols into production binaries."

@@ -1,0 +1,135 @@
+id: OPAL_COOKBOOK
+title: "Opal Recipe: Two-Tier Terminal UI Engine, Split-Pane Builders & Headless TEA Verification"
+summary: Decoupling cell-buffer diff rendering and TEA state machines from declarative UI builders, OSC-8 links, and headless pilot specs.
+track: 05_hardening_cookbook
+overview: |
+  `sol-vin/opal` is the Sol-Vin organization's next-generation TUI and CLI framework, unifying Bubbletea
+  (The Elm Architecture), Lipgloss-inspired composable styling, Blessed delta cell rendering, and Clap-style
+  CLI command builders. Opal exemplifies the Two-Tier Codex by isolating 2D cell-buffer diffing, ANSI escape
+  parsing, and input remapping state machines from its declarative block builders (`Opal::UI.build`,
+  `Opal::UI.split_pane`, `Opal::Input.remap`).
+
+related_sources:
+  - "repos/opal/src/opal/ui/dsl.cr"
+  - "repos/opal/src/opal/ui/components/split_view.cr"
+  - "repos/opal/src/opal/ui/components/link.cr"
+  - "repos/opal/src/opal/input/dsl/remap_builder.cr"
+  - "repos/opal/src/opal/testing/pilot.cr"
+
+sections:
+  - id: topic_01_tier_one_cell_buffer_and_tea
+    title: "Tier 1 Core Engine: Cell Buffer Diffing, ANSI Parser & TEA Loop"
+    summary: Allocation-free 2D terminal cell grids, delta rendering, and pure Model-Update-View transitions.
+    content: |
+      Opal's Tier 1 engine (`src/opal/ui/`, `src/opal/tea/`, `src/opal/terminal/`) processes terminal state
+      as pure data structures:
+
+      - **`Opal::UI::Cell` & `Opal::UI::Buffer`**: Value-type 2D character grid storing grapheme clusters,
+        RGB/256 foreground and background colors, style bitflags, and optional OSC-8 hyperlink URLs.
+      - **`Opal::UI::DiffRenderer`**: Compares the current frame `Buffer` against the previous frame `Buffer`,
+        emitting the minimal sequence of ANSI cursor movements and SGR escape codes required to update the screen.
+      - **`Opal::TEA::Model` & `Opal::TEA::Program`**: Pure state machine interface (`init`, `update(msg)`, `view`)
+        decoupled from physical terminal drivers via `Opal::Terminal::Mock` for deterministic testing.
+      - **`Opal::Terminal::ANSIParser`**: State-machine parser decoding CSI, OSC, and UTF-8 key/mouse input streams.
+
+  - id: topic_02_tier_two_ui_and_split_pane_builders
+    title: "Tier 2 Declarative UI Builders: Split Panes, Stacks & OSC-8 Links"
+    summary: Composing terminal layouts with Opal::UI.render, hsplit/vsplit, pane, and link(url, label).
+    content: |
+      Opal's Tier 2 DSL (`Opal::UI::Builder`, `Opal::UI::SplitBuilder`) transforms nested blocks into Tier 1
+      `Element` hierarchies with zero boilerplate:
+    examples:
+      - |
+        ```crystal
+        require "opal"
+
+        rendered = Opal::UI.render_ansi(width: 80, height: 16) do
+          vsplit(ratio: 0.75) do
+            top do
+              hsplit(ratio: 0.4) do
+                pane(title: "Navigation", border: :rounded, border_fg: :cyan) do
+                  vstack do
+                    link "https://github.com/sol-vin/opal", "Opal Repository"
+                    link "https://github.com/sol-vin/jasper", "Jasper Docs"
+                  end
+                end
+                pane(title: "Telemetry", border: :rounded, border_fg: :green) do
+                  table(headers: ["Shard", "Status"]) do |t|
+                    t.row "carbon", "Synced"
+                    t.row "crowbar", "Hardened"
+                    t.row "bakelite", "Verified"
+                  end
+                end
+              end
+            end
+            bottom do
+              box(title: "Status Bar", border: :single) do
+                text "Watchdog: ACTIVE (<= 60s) | All Quality Gates Green"
+              end
+            end
+          end
+        end
+        ```
+
+  - id: topic_03_declarative_input_remapping_dsl
+    title: "Two-Tier Input Remapping & Godot 4.8 InputMap Generator"
+    summary: Defining action bindings with Opal::Input.remap and exporting deterministic Godot project.godot configs.
+    content: |
+      `Opal::Input::DSL::RemapBuilder` wraps `Opal::Input::Core::RemapModel` to provide declarative key,
+      mouse, and gamepad chord binding with automatic conflict detection and Godot 4.8 `InputMap` serialization:
+    examples:
+      - |
+        ```crystal
+        model = Opal::Input.remap(profile: "celestine_default") do |r|
+          r.context :gameplay, "Core Gameplay Controls" do |ctx|
+            ctx.action :jump, "Jump / Wall Kick" do |act|
+              act.key "Space"
+              act.gamepad_button :south
+            end
+            ctx.action :dash, "Prism Air Dash" do |act|
+              act.key "Shift+Z"
+              act.gamepad_trigger :right_trigger, deadzone: 0.25
+            end
+          end
+        end
+
+        # Verify zero chord conflicts and export Godot 4.8 [input] section
+        conflicts = model.detect_conflicts
+        godot_cfg = model.to_godot_input_map
+        ```
+
+  - id: topic_04_headless_pilot_and_parser_hardening
+    title: "Hardening Recipe: Headless Pilot Assertions & ANSI Parser Fuzzing"
+    summary: Testing interactive TUI models with Opal::Testing::Pilot and fuzzing ANSIParser via Crowbar.
+    content: |
+      Interactive TUI components must never hang waiting for TTY input during `crystal spec`. Opal provides
+      `Opal::Testing::Pilot` for headless event injection alongside `Crowbar.corpus_gate` for hardening
+      `Opal::Terminal::ANSIParser` against arbitrary malformed escape sequences:
+    examples:
+      - |
+        ```crystal
+        # 1. Deterministic headless TEA verification via Pilot
+        Opal::Testing::Pilot.run(MyDashboardModel.new, width: 80, height: 24) do |pilot|
+          pilot.press("Tab")
+          pilot.type("search query")
+          pilot.press("Enter")
+          pilot.assert_contains("Results: 3")
+        end
+
+        # 2. Fuzzing ANSIParser with Crowbar.corpus_gate under 60s watchdog
+        Crowbar.corpus_gate("Opal ANSIParser Fuzz Gate") do |gate|
+          gate.watchdog_budget 30.seconds
+          gate.seed 0x09A1_u64
+          gate.iterations 50
+
+          gate.corpus "\e[38;2;255;100;0mHello\e[0m", id: "truecolor_sgr"
+          gate.corpus "\e]8;;https://sol.vin\e\\Link\e]8;;\e\\", id: "osc8_hyperlink"
+
+          gate.execute do |bytes|
+            parser = Opal::Terminal::ANSIParser.new
+            parser.parse(bytes)
+          end
+        end
+        ```
+    pitfalls:
+      - "Never instantiate live `Opal::Terminal::POSIX` or `Opal::Terminal::Windows` raw-mode drivers inside unit specs; always use `Opal::Terminal::Mock` or `Opal::Testing::Pilot`."

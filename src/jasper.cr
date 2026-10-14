@@ -9,6 +9,7 @@ require "./jasper/validator"
 require "./jasper/indexer"
 require "./jasper/generator"
 require "./jasper/multi_shard_indexer"
+require "./jasper/cookbook"
 
 module Jasper
 end
