@@ -1,0 +1,112 @@
+---
+settings:
+  title: CARBON CHANGELOG
+  output_file: CHANGELOG.md
+  auto_link_github: true
+  categories:
+    breaking:
+      title: "\U0001F4A5 Breaking Changes"
+      bullet: ▲
+    features:
+      title: ✨ Features & Improvements
+      bullet: ✦
+    fixes:
+      title: "\U0001F41B Bug Fixes"
+      bullet: ✓
+    perf:
+      title: ⚡ Performance Optimizations
+      bullet: "\U0001F680"
+    docs:
+      title: "\U0001F4DA Documentation"
+      bullet: "\U0001F4D6"
+    maintenance:
+      title: "\U0001F6E0️ Chores & Tooling"
+      bullet: •
+releases:
+- version: 0.1.16
+  date: "2026-10-13"
+  status: active
+  entries:
+  - type: other
+    description: 'Initial commit: Jasper modular Crystal documentation compiler and
+      CLI'
+    bullet: •
+    hash: 03520e8
+    author: Ian Rash
+  - type: other
+    description: Enhance generator with root_module detection and default quick start
+    bullet: •
+    hash: 57458d6
+    author: Ian Rash
+  - type: other
+    description: Fix CI apt package list update and apply crystal formatting
+    bullet: •
+    hash: bfb8df7
+    author: Ian Rash
+  - type: other
+    description: Configure CLI entrypoint in src/jasper_cli.cr and build via shards
+      build jasper
+    bullet: •
+    hash: 970855c
+    author: Ian Rash
+  - type: other
+    description: Use crystal docs --project-name in CI smoke test
+    bullet: •
+    hash: 84f01e6
+    author: Ian Rash
+  - type: docs
+    description: add Getting Started with Lapis 5-minute showcase guide
+    bullet: "\U0001F4D6"
+    badge: '[SHOWCASE]'
+    hash: a6df407
+    author: Ian Rash
+  - type: feat
+    description: implement Two-Tier Multi-Shard Documentation Indexer
+    bullet: ✦
+    badge: '[INDEXER]'
+    hash: 2a33b23
+    author: Ian Rash
+  - type: docs
+    description: Formalize Two-Tier Engine and Declarative Builder DSL Codex
+    bullet: "\U0001F4D6"
+    badge: '[CODEX]'
+    hash: 923d72f
+    author: Ian Rash
+  - type: feat
+    description: Add Lapis Quick Reference Cheat Sheet Typst template and vector PDF
+    bullet: ✦
+    badge: '[TYPST]'
+    hash: 123a058
+    author: Ian Rash
+  - type: other
+    description: 'Merge pull request #1 from sol-vin/feat/lapis-showcase-guide'
+    bullet: •
+    hash: 6b35826
+    author: Ian Rash
+  - type: other
+    description: 'Merge pull request #3 from sol-vin/docs/two-tier-dsl-codex-book'
+    bullet: •
+    hash: e68ff2e
+    author: Ian Rash
+  - type: other
+    description: 'Merge pull request #2 from sol-vin/feat/multi-shard-documentation-index'
+    bullet: •
+    hash: b5a2e83
+    author: Ian Rash
+  - type: other
+    description: 'Merge pull request #4 from sol-vin/feat/typst-quick-reference-card'
+    bullet: •
+    hash: 962fc70
+    author: Ian Rash
+  - type: chore
+    description: format crystal sources and sync carbon version
+    bullet: •
+    badge: '[CI]'
+    hash: 95ccd67
+    author: Ian Rash
+  - type: fix
+    description: assert Jasper::VERSION dynamically in multi_shard_indexer_spec
+    bullet: ✓
+    badge: '[SPEC]'
+    hash: 1c4dda2
+    author: Ian Rash
