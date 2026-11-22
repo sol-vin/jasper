@@ -132,7 +132,8 @@ module Jasper
         io.puts "#{pad}#"
         if overview = doc.overview
           overview_filtered = @pipeline.apply_markdown_filters(overview)
-          overview_filtered.lines.each do |l|
+          overview_safe = escape_macro_delimiters(overview_filtered)
+          overview_safe.lines.each do |l|
             io.puts "#{pad}# #{l}".rstrip
           end
           io.puts "#{pad}#"
@@ -215,7 +216,7 @@ module Jasper
       if content = sec.content
         filtered = @pipeline.apply_markdown_filters(content)
         doc_content = MarkdownConverter.to_doc_comments(
-          filtered,
+          escape_macro_delimiters(filtered),
           indent_level: indent_level,
           convert_tables: @config.features.table_auto_html
         )
@@ -251,11 +252,17 @@ module Jasper
         io.puts "#{m_pad}# #### Working Examples"
         io.puts "#{m_pad}#"
         examples.each do |ex|
-          ex.lines.each do |el|
+          escape_macro_delimiters(ex).lines.each do |el|
             io.puts "#{m_pad}# #{el}".rstrip
           end
           io.puts "#{m_pad}#"
         end
+      end
+
+      # Side-by-side multi-target comparisons
+      if (comparisons = sec.comparisons) && !comparisons.empty?
+        io.puts ComparisonRenderer.render_to_doc_comments(comparisons, indent_level: indent_level)
+        io.puts "#{m_pad}#"
       end
 
       # Common pitfalls
@@ -307,6 +314,14 @@ module Jasper
 
     private def pad_or_indent(base_pad : String, extra_levels : Int32) : String
       "#{base_pad}# #{"  " * extra_levels}"
+    end
+
+    # When `release_guard` wraps generated modules in `{% unless flag?(:release) %}`,
+    # unescaped `{%` and `{{` inside `#` doc comments would be parsed as nested Crystal macros.
+    # Prefixing with `\` (`\{%`, `\{{`) causes Crystal's outer macro expansion to emit literal `{%` and `{{`.
+    private def escape_macro_delimiters(text : String) : String
+      return text unless @config.features.release_guard
+      text.gsub(/(?<!\\)\{%/, "\\{%").gsub(/(?<!\\)\{\{/, "\\{{")
     end
 
     private def generate_master_file(

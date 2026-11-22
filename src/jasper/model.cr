@@ -2,6 +2,42 @@ require "yaml"
 require "json"
 
 module Jasper
+  class ComparisonColumn
+    include YAML::Serializable
+    include JSON::Serializable
+
+    property label : String
+    property code : String
+    property lang : String = "crystal"
+    property badge : String? = nil
+
+    def initialize(
+      @label : String,
+      @code : String,
+      @lang : String = "crystal",
+      @badge : String? = nil,
+    )
+    end
+  end
+
+  class ComparisonBlock
+    include YAML::Serializable
+    include JSON::Serializable
+
+    property title : String? = nil
+    property description : String? = nil
+    property columns : Array(ComparisonColumn) = [] of ComparisonColumn
+    property notes : Array(String)? = nil
+
+    def initialize(
+      @columns : Array(ComparisonColumn) = [] of ComparisonColumn,
+      @title : String? = nil,
+      @description : String? = nil,
+      @notes : Array(String)? = nil,
+    )
+    end
+  end
+
   class DocSection
     include YAML::Serializable
     include JSON::Serializable
@@ -13,6 +49,7 @@ module Jasper
     property content : String? = nil
     property options : Hash(String, String)? = nil
     property examples : Array(String)? = nil
+    property comparisons : Array(ComparisonBlock)? = nil
     property pitfalls : Array(String)? = nil
     property faqs : Array(Hash(String, String))? = nil
     property topics : Array(String)? = nil
@@ -29,6 +66,7 @@ module Jasper
       @content : String? = nil,
       @options : Hash(String, String)? = nil,
       @examples : Array(String)? = nil,
+      @comparisons : Array(ComparisonBlock)? = nil,
       @pitfalls : Array(String)? = nil,
       @faqs : Array(Hash(String, String))? = nil,
       @topics : Array(String)? = nil,

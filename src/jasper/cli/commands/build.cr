@@ -88,6 +88,24 @@ module Jasper
           0
         end
       end
+
+      class PatchCss
+        def self.run(args : Array(String)) : Int32
+          docs_dir = args.first? || "docs"
+          css_file = Path.new(docs_dir).join("css/style.css")
+          unless File.exists?(css_file)
+            Terminal.error("Crystal docs stylesheet not found at '#{css_file}'. Run 'crystal docs' first.")
+            return 1
+          end
+
+          if CssPatcher.patch(docs_dir)
+            Terminal.success("Patched side-by-side comparison styles into #{css_file}!")
+          else
+            Terminal.info("Comparison styles already present in #{css_file}.")
+          end
+          0
+        end
+      end
     end
   end
 end

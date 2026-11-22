@@ -1,4 +1,21 @@
 module Jasper
+  class ComparisonBuilder
+    getter block : ComparisonBlock
+
+    def initialize(title : String? = nil, description : String? = nil)
+      @block = ComparisonBlock.new(title: title, description: description)
+    end
+
+    def column(label : String, code : String, lang : String = "crystal", badge : String? = nil) : Nil
+      @block.columns << ComparisonColumn.new(label: label, code: code, lang: lang, badge: badge)
+    end
+
+    def note(text : String) : Nil
+      notes = @block.notes ||= [] of String
+      notes << text
+    end
+  end
+
   class SectionBuilder
     getter section : DocSection
 
@@ -22,6 +39,13 @@ module Jasper
     def example(code : String) : Nil
       exs = @section.examples ||= [] of String
       exs << code
+    end
+
+    def comparison(title : String? = nil, description : String? = nil, &block : ComparisonBuilder -> Nil) : Nil
+      builder = ComparisonBuilder.new(title: title, description: description)
+      block.call(builder)
+      cmps = @section.comparisons ||= [] of ComparisonBlock
+      cmps << builder.block
     end
 
     def pitfall(warning : String) : Nil

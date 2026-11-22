@@ -31,6 +31,8 @@ module Jasper
           Commands::List.run(sub_args)
         when "clean", "purge"
           Commands::Clean.run(sub_args)
+        when "patch-css"
+          Commands::PatchCss.run(sub_args)
         else
           Terminal.error("Unknown command '#{subcommand}'. Run 'jasper --help' for available commands.")
           1

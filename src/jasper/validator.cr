@@ -81,6 +81,22 @@ module Jasper
         if sec.summary.strip.empty?
           res.warnings << "#{rel_path}: Section '#{sec.id}' has an empty 'summary'."
         end
+
+        if comparisons = sec.comparisons
+          comparisons.each_with_index do |cmp, cidx|
+            if cmp.columns.size < 2
+              res.errors << "#{rel_path}: Section '#{sec.id}' comparison ##{cidx + 1} must define at least 2 columns."
+            end
+            cmp.columns.each_with_index do |col, col_idx|
+              if col.label.strip.empty?
+                res.errors << "#{rel_path}: Section '#{sec.id}' comparison ##{cidx + 1} column ##{col_idx + 1} has an empty 'label'."
+              end
+              if col.code.strip.empty?
+                res.errors << "#{rel_path}: Section '#{sec.id}' comparison ##{cidx + 1} column ##{col_idx + 1} has empty 'code'."
+              end
+            end
+          end
+        end
       end
     end
   end
